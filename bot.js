@@ -2,23 +2,9 @@ const mineflayer = require('mineflayer');
 
 const HOST = process.env.MC_HOST;
 const PORT = Number(process.env.MC_PORT || 25565);
-const USERNAME = 'Pizdamatilda228';
+const USERNAME = 'Gitler';
 const VERSION = '1.21.4';
-const LS_PASS = process.env.LS_PASS; // пароль для LoginSecurity
-
-async function tap(key, ms) {
-  bot.setControlState(key, true);
-  await sleep(ms);
-  bot.setControlState(key, false);
-}
-
-setInterval(async () => {
-  if (!ready) return;
-  if (Math.random() < 0.5) await tap('left', 200 + Math.floor(Math.random()*200));
-  else await tap('right', 200 + Math.floor(Math.random()*200));
-
-  if (Math.random() < 0.15) await tap('jump', 120);
-}, 2500);
+const LS_PASS = process.env.LS_PASS; // Secret
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -31,15 +17,27 @@ if (!LS_PASS) {
   process.exit(1);
 }
 
-let bot;
+let bot = null;
+let ready = false;     // ✅ теперь объявлено
+let authed = false;    // чтобы не спамить /login
+let startedLoops = false;
 
-function scheduleReconnect() {
+function reconnect() {
   console.log('Reconnecting in 30s...');
   setTimeout(() => startBot(), 30000);
 }
 
+function safeText(x) {
+  try { return String(x); } catch { return '<unprintable>'; }
+}
+
 function startBot() {
   console.log(`Connecting to ${HOST}:${PORT} as ${USERNAME}`);
+
+  // сброс флагов на каждый новый коннект
+  ready = false;
+  authed = false;
+  startedLoops = false;
 
   bot = mineflayer.createBot({
     host: HOST,
@@ -48,17 +46,21 @@ function startBot() {
     version: VERSION
   });
 
-  // Печать всех сообщений сервера
+  // Логи чата
   bot.on('message', (msg) => {
-    const text = msg.toString();
-    console.log('CHAT:', text);
+    console.log('CHAT:', msg.toString());
   });
 
-  // Авто-логин для LoginSecurity/AuthMe-подобных
+  // LoginSecurity авто-команды
   bot.on('messagestr', async (text) => {
     const t = text.toLowerCase();
 
-    // часто сервер пишет "Please register" / "Use /register" / "Please login" и т.п.
+    if (t.includes('successfully logged in') || t.includes('успешно вош')) {
+      authed = true;
+      return;
+    }
+
+    // Если просит /register
     if (t.includes('/register')) {
       await sleep(1200);
       bot.chat(`/register ${LS_PASS} ${LS_PASS}`);
@@ -66,7 +68,9 @@ function startBot() {
       return;
     }
 
+    // Если просит /login
     if (t.includes('/login')) {
+      if (authed) return;
       await sleep(1200);
       bot.chat(`/login ${LS_PASS}`);
       console.log('Sent /login');
@@ -76,99 +80,129 @@ function startBot() {
 
   bot.once('spawn', async () => {
     console.log('Spawned! Waiting a bit for LoginSecurity...');
+    ready = false;
 
-    // даём серверу время прислать подсказку /login или /register
+    // ждём подсказки /login, потом fallback
     await sleep(3000);
-
-    // если подсказку не поймали, попробуем login (безопасно: если уже залогинен — просто скажет ошибку)
-    bot.chat(`/login ${LS_PASS}`);
-    console.log('Tried /login (fallback)');
-
-    // начинаем активность чуть позже, чтобы не триггерить плагины сразу после входа
-    await sleep(4000);
-
-    // Ходим влево-вправо
-    let side = 0;
-    setInterval(() => {
-      side = 1 - side;
-      bot.setControlState('left', side === 0);
-      bot.setControlState('right', side === 1);
-
-      if (Math.random() < 0.18) {
-        bot.setControlState('jump', true);
-        setTimeout(() => bot.setControlState('jump', false), 250);
-      }
-    }, 2500);
-
-    // Копаем блок
-    while (true) {
-      await sleep(4500 + Math.floor(Math.random() * 2500));
-      try {
-        const block = bot.blockAtCursor(4);
-        if (!block) continue;
-
-        const name = block.name || '';
-        if (
-          name === 'air' ||
-          name.includes('water') ||
-          name.includes('lava') ||
-          name === 'bedrock'
-        ) continue;
-
-        if (Math.random() < 0.35) continue;
-
-        await bot.dig(block, true);
-        console.log('Dug:', name);
-      } catch (e) {
-        console.log('Dig error:', String(e?.message || e));
-      }
+    if (!authed) {
+      bot.chat(`/login ${LS_PASS}`);
+      console.log('Tried /login (fallback)');
     }
+
+    // Дадим миру догрузиться + чтобы не ловить "moved wrongly" сразу
+    await sleep(5000);
+
+    // считаем "готов" только если есть entity/позиция
+    if (bot.entity && bot.entity.position) {
+      ready = true;
+    }
+
+    // запускаем циклы один раз за подключение
+    if (!startedLoops) {
+      startedLoops = true;
+      startMovementLoop();
+      startDigLoop();
+    }
+  });
+
+  // После респавна — снова пауза и "ready"
+  bot.on('respawn', async () => {
+    console.log('Respawned');
+    ready = false;
+    bot.clearControlStates();
+    await sleep(5000);
+    ready = Boolean(bot.entity && bot.entity.position);
+  });
+
+  // Если умер — попробуем respawn (и остановим движения)
+  bot.on('death', async () => {
+    console.log('Died -> stopping movement and respawn');
+    ready = false;
+    bot.clearControlStates();
+    await sleep(1500);
+    try { bot.respawn(); } catch {}
   });
 
   bot.on('kicked', (reason) => {
     try {
       console.log('Kicked raw:', JSON.stringify(reason, null, 2));
     } catch {
-      console.log('Kicked:', String(reason));
+      console.log('Kicked:', safeText(reason));
     }
-    scheduleReconnect();
+    reconnect();
   });
 
   bot.on('end', () => {
     console.log('Disconnected');
-    scheduleReconnect();
+    reconnect();
   });
 
   bot.on('error', (err) => {
     console.log('Error:', err?.message || err);
   });
-
-  bot.on('death', async () => {
-  console.log('Died -> stopping movement and respawn');
-  bot.clearControlStates();      // остановить все кнопки
-  await sleep(1500);
-  try { bot.respawn(); } catch {}
-});
-  let ready = false;
-
-bot.once('spawn', async () => {
-  ready = false;
-  await sleep(5000);
-  ready = true;
-});
-
-bot.on('respawn', async () => {
-  ready = false;
-  await sleep(5000);
-  ready = true;
-});
-  if (!ready || !bot.entity || !bot.entity.position) return;
-  process.on('uncaughtException', (err) => {
-  console.log('uncaughtException:', err);
-  try { bot?.end(); } catch {}
-  setTimeout(() => startBot(), 30000);
-});
 }
 
+// Мягкие "тапы" вместо удержания (меньше moved wrongly)
+async function tap(key, ms) {
+  if (!bot) return;
+  bot.setControlState(key, true);
+  await sleep(ms);
+  bot.setControlState(key, false);
+}
+
+function startMovementLoop() {
+  setInterval(async () => {
+    if (!bot || !ready || !bot.entity || !bot.entity.position) return;
+
+    // иногда вообще ничего не делаем
+    if (Math.random() < 0.25) return;
+
+    // лево/право коротко
+    if (Math.random() < 0.5) await tap('left', 180 + Math.floor(Math.random() * 220));
+    else await tap('right', 180 + Math.floor(Math.random() * 220));
+
+    // редкий прыжок
+    if (Math.random() < 0.10) await tap('jump', 120);
+  }, 2500);
+}
+
+function startDigLoop() {
+  (async () => {
+    while (true) {
+      await sleep(8000 + Math.floor(Math.random() * 7000)); // реже, чтобы не палиться
+      if (!bot || !ready || !authed || !bot.entity || !bot.entity.position) continue;
+
+      try {
+        const block = bot.blockAtCursor(4);
+        if (!block) continue;
+
+        const name = block.name || '';
+
+        // НЕ трогаем опасное/контейнеры/механизмы
+        const deny = [
+          'air', 'water', 'lava', 'bedrock',
+          'chest', 'barrel', 'shulker', 'furnace', 'hopper',
+          'door', 'trapdoor', 'button', 'lever', 'pressure_plate'
+        ];
+        if (deny.some(d => name.includes(d))) continue;
+
+        // иногда пропускаем
+        if (Math.random() < 0.45) continue;
+
+        await bot.dig(block, true);
+        console.log('Dug:', name);
+      } catch (e) {
+        console.log('Dig error:', safeText(e?.message || e));
+      }
+    }
+  })();
+}
+
+// Если Mineflayer/physics крашнется — не даём workflow умереть
+process.on('uncaughtException', (err) => {
+  console.log('uncaughtException:', err);
+  try { bot?.end(); } catch {}
+  reconnect();
+});
 
 startBot();
