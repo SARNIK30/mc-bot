@@ -142,6 +142,33 @@ function startBot() {
   bot.on('error', (err) => {
     console.log('Error:', err?.message || err);
   });
+
+  bot.on('death', async () => {
+  console.log('Died -> stopping movement and respawn');
+  bot.clearControlStates();      // остановить все кнопки
+  await sleep(1500);
+  try { bot.respawn(); } catch {}
+});
+  let ready = false;
+
+bot.once('spawn', async () => {
+  ready = false;
+  await sleep(5000);
+  ready = true;
+});
+
+bot.on('respawn', async () => {
+  ready = false;
+  await sleep(5000);
+  ready = true;
+});
+  if (!ready || !bot.entity || !bot.entity.position) return;
+  process.on('uncaughtException', (err) => {
+  console.log('uncaughtException:', err);
+  try { bot?.end(); } catch {}
+  setTimeout(() => startBot(), 30000);
+});
 }
+
 
 startBot();
