@@ -6,6 +6,20 @@ const USERNAME = 'Pizdamatilda228';
 const VERSION = '1.21.4';
 const LS_PASS = process.env.LS_PASS; // пароль для LoginSecurity
 
+async function tap(key, ms) {
+  bot.setControlState(key, true);
+  await sleep(ms);
+  bot.setControlState(key, false);
+}
+
+setInterval(async () => {
+  if (!ready) return;
+  if (Math.random() < 0.5) await tap('left', 200 + Math.floor(Math.random()*200));
+  else await tap('right', 200 + Math.floor(Math.random()*200));
+
+  if (Math.random() < 0.15) await tap('jump', 120);
+}, 2500);
+
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 if (!HOST || !PORT) {
