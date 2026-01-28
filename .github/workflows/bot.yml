@@ -1,90 +1,20 @@
-const mineflayer = require('mineflayer');
-
-const HOST = process.env.MC_HOST;
-const PORT = Number(process.env.MC_PORT || 25565);
-const USERNAME = 'Pizdamatilda228';
-const VERSION = '1.21.4';
-
-if (!HOST) {
-  console.error('MC_HOST secret is missing');
-  process.exit(1);
+Run node bot.js
+Error: connect ECONNREFUSED ***:***
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1611:16) {
+  errno: -111,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '***',
+  port: ***
 }
-
-let bot;
-
-function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms));
+Error: Error: connect ECONNREFUSED ***:***
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1611:16) {
+  errno: -111,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '***',
+  port: ***
 }
+Disconnected
+Error: Process completed with exit code 1.
 
-function startBot() {
-  console.log(`Connecting to ${HOST}:${PORT} as ${USERNAME} (${VERSION})`);
-
-  bot = mineflayer.createBot({
-    host: HOST,
-    port: PORT,
-    username: USERNAME,
-    version: VERSION
-  });
-
-  bot.once('spawn', () => {
-    console.log('Spawned ✅');
-
-    // ходьба влево-вправо
-    let side = 0;
-    setInterval(() => {
-      side = 1 - side;
-      bot.setControlState('left', side === 0);
-      bot.setControlState('right', side === 1);
-
-      if (Math.random() < 0.18) {
-        bot.setControlState('jump', true);
-        setTimeout(() => bot.setControlState('jump', false), 250);
-      }
-    }, 2500);
-
-    // копание
-    (async () => {
-      while (true) {
-        await sleep(4500 + Math.floor(Math.random() * 2500));
-        try {
-          const block = bot.blockAtCursor(4);
-          if (!block) continue;
-
-          const name = block.name || '';
-          if (
-            name === 'air' ||
-            name.includes('water') ||
-            name.includes('lava') ||
-            name === 'bedrock'
-          ) continue;
-
-          if (Math.random() < 0.35) continue;
-
-          await bot.dig(block, true);
-          console.log('Dug:', name);
-        } catch (e) {
-          console.log('Dig error:', String(e?.message || e));
-        }
-      }
-    })();
-  });
-
-  bot.on('error', (err) => {
-    console.log('Error:', err?.message || err);
-  });
-
-  bot.on('end', async () => {
-    console.log('Disconnected. Reconnecting in 30s...');
-    await sleep(30000);
-    startBot();
-  });
-
-  bot.on('kicked', async (reason) => {
-    console.log('Kicked:', reason);
-    console.log('Reconnecting in 30s...');
-    await sleep(30000);
-    startBot();
-  });
-}
-
-startBot();
