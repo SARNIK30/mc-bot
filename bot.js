@@ -23,7 +23,7 @@ let authed = false;    // чтобы не спамить /login
 let startedLoops = false;
 
 function reconnect() {
-  console.log('Reconnecting in 30s...');
+  console.log('Reconnecting in 60s...');
   setTimeout(() => startBot(), 30000);
 }
 
