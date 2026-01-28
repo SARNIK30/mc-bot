@@ -21,4 +21,5 @@ jobs:
         env:
           MC_HOST: ${{ secrets.MC_HOST }}
           MC_PORT: ${{ secrets.MC_PORT }}
+          LS_PASS: ${{ secrets.LS_PASS }}
         run: node bot.js
