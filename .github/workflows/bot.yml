@@ -1,19 +1,27 @@
 name: MC Bot
 
 on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *"   # каждые 30 минут (UTC)
   push:
     branches: [ "main" ]
-  workflow_dispatch:
+
+concurrency:
+  group: mc-bot
+  cancel-in-progress: true   # новый запуск отменит старый и стартанёт заново
 
 jobs:
   run:
     runs-on: ubuntu-latest
+    timeout-minutes: 350      # ~5ч50м
+
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 18     # стабильнее для mineflayer
 
       - run: npm install
 
