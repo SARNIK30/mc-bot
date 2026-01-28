@@ -1,33 +1,29 @@
-name: MC Bot 24-7-ish
+name: MC Bot
 
-on:
+'on':
   workflow_dispatch:
   schedule:
-    - cron: "0 * * * *"  # каждый час
-
-concurrency:
-  group: mc-bot
-  cancel-in-progress: true
+    - cron: '0 * * * *'
 
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 355  # ~5h55m, чтобы не упираться в лимиты
+    timeout-minutes: 350
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install deps
-        run: npm ci || npm i
+      - name: Install dependencies
+        run: npm install
 
-      - name: Run bot
+      - name: Start bot
         env:
           MC_HOST: ${{ secrets.MC_HOST }}
           MC_PORT: ${{ secrets.MC_PORT }}
-        run: npm start
+        run: node bot.js
