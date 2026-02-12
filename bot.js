@@ -2,8 +2,8 @@ const mineflayer = require('mineflayer');
 
 const HOST = process.env.MC_HOST;
 const PORT = Number(process.env.MC_PORT || 25565);
-const USERNAME = 'Gitler';
-const VERSION = '1.21.4';
+const USERNAME = 'Snorlax';
+const VERSION = 'false';
 const LS_PASS = process.env.LS_PASS; // Secret
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -133,9 +133,9 @@ function startBot() {
   });
 
   bot.on('end', () => {
-    console.log('Disconnected');
-    reconnect();
-  });
+  console.log('Отключен. Переподключение через 15 сек...')
+  setTimeout(createBot, 15000)
+})
 
   bot.on('error', (err) => {
     console.log('Error:', err?.message || err);
