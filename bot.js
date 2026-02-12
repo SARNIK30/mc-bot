@@ -3,7 +3,7 @@ const mineflayer = require('mineflayer');
 const HOST = process.env.MC_HOST;
 const PORT = Number(process.env.MC_PORT || 25565);
 const USERNAME = 'Snorlax';
-const VERSION = 'false';
+const VERSION = '1.21.4';
 const LS_PASS = process.env.LS_PASS; // Secret
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
