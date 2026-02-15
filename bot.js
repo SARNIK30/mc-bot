@@ -23,8 +23,7 @@ function startBot() {
   bot = mineflayer.createBot({
     host: HOST,
     port: PORT,
-    username: USERNAME,
-    version: VERSION
+    username: USERNAME
   })
 
   bot.on('spawn', () => {
