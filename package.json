@@ -2,11 +2,10 @@
   "name": "mc-bot",
   "version": "1.0.0",
   "main": "bot.js",
-  "type": "commonjs",
   "scripts": {
     "start": "node bot.js"
   },
   "dependencies": {
-    "mineflayer": "^4.25.0"
+    "mineflayer": "^4.20.1"
   }
 }
