@@ -1,7 +1,6 @@
 const mineflayer = require('mineflayer')
 
 const HOST = process.env.MC_HOST
-const PORT = parseInt(process.env.MC_PORT || 25565)
 const USERNAME = process.env.MC_USER || 'Snorlax'
 const LS_PASS = process.env.LS_PASS
 
