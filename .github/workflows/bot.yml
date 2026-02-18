@@ -9,25 +9,29 @@ on:
 
 concurrency:
   group: mc-bot
-  cancel-in-progress: true   # новый запуск отменит старый и стартанёт заново
+  cancel-in-progress: true
 
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 350      # ~5ч50м
+    timeout-minutes: 350
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: 18     # стабильнее для mineflayer
+          node-version: 18
 
-      - run: npm install
+      - name: Install dependencies
+        run: npm install
 
       - name: Start bot
         env:
           MC_HOST: ${{ secrets.MC_HOST }}
           MC_PORT: ${{ secrets.MC_PORT }}
           LS_PASS: ${{ secrets.LS_PASS }}
+          MC_USER: ${{ secrets.MC_USER }}
         run: node bot.js
