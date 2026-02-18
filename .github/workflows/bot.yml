@@ -31,7 +31,6 @@ jobs:
       - name: Start bot
         env:
           MC_HOST: ${{ secrets.MC_HOST }}
-          MC_PORT: ${{ secrets.MC_PORT }}
           LS_PASS: ${{ secrets.LS_PASS }}
           MC_USER: ${{ secrets.MC_USER }}
         run: node bot.js
