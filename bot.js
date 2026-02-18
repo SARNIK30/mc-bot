@@ -1,7 +1,8 @@
 const mineflayer = require('mineflayer');
 const dns = require('dns').promises;
 
-const HOST = process.env.MC_HOST;                 
+const HOST = process.env.MC_HOST;                 // 
+const PORT_ENV = process.env.MC_PORT;             // можно не задавать
 const USERNAME = process.env.MC_USER || 'Snorlax';
 const LS_PASS = process.env.LS_PASS;
 
@@ -22,17 +23,16 @@ async function resolveTarget(host) {
     return { host, port: Number(PORT_ENV) };
   }
 
-  // пробуем SRV для Minecraft
+  // пробуем SRV _minecraft._tcp.<host>
   const srvName = `_minecraft._tcp.${host}`;
   try {
     const records = await dns.resolveSrv(srvName);
-    // обычно берём запись с наибольшим priority/weight “как есть” — чаще всего первая норм
     const best = records.sort((a, b) => a.priority - b.priority || b.weight - a.weight)[0];
-    // target может быть с точкой на конце
+
     const targetHost = best.name.endsWith('.') ? best.name.slice(0, -1) : best.name;
     return { host: targetHost, port: best.port };
-  } catch (e) {
-    // SRV нет — fallback на стандартный порт
+  } catch {
+    // если SRV нет — fallback
     return { host, port: 25565 };
   }
 }
