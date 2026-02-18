@@ -6,7 +6,6 @@
     "start": "node bot.js"
   },
   "dependencies": {
-    "mineflayer": "^4.35.0",
-    "mc-dns": "^2.0.0"
+    "mineflayer": "^4.35.0"
   }
 }
