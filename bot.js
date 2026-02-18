@@ -1,7 +1,7 @@
 const mineflayer = require('mineflayer');
-const { resolveMinecraftSrv } = require('mc-dns');
+const dns = require('dns').promises;
 
-const HOST = process.env.MC_HOST;              
+const HOST = process.env.MC_HOST;                 
 const USERNAME = process.env.MC_USER || 'Snorlax';
 const LS_PASS = process.env.LS_PASS;
 
@@ -16,36 +16,40 @@ if (!LS_PASS) {
 
 let bot;
 
-async function getTarget() {
-  // Если порт задан — используем его
-  if (PORT_ENV) {
-    return { host: HOST, port: Number(PORT_ENV) };
+async function resolveTarget(host) {
+  // если порт задан вручную — используем его
+  if (PORT_ENV && String(PORT_ENV).trim() !== '') {
+    return { host, port: Number(PORT_ENV) };
   }
 
-  // Если порт НЕ задан — пытаемся взять из SRV (_minecraft._tcp)
+  // пробуем SRV для Minecraft
+  const srvName = `_minecraft._tcp.${host}`;
   try {
-    const { host, port } = await resolveMinecraftSrv(HOST);
-    return { host, port };
+    const records = await dns.resolveSrv(srvName);
+    // обычно берём запись с наибольшим priority/weight “как есть” — чаще всего первая норм
+    const best = records.sort((a, b) => a.priority - b.priority || b.weight - a.weight)[0];
+    // target может быть с точкой на конце
+    const targetHost = best.name.endsWith('.') ? best.name.slice(0, -1) : best.name;
+    return { host: targetHost, port: best.port };
   } catch (e) {
-    // Если SRV нет — fallback на 25565
-    return { host: HOST, port: 25565 };
+    // SRV нет — fallback на стандартный порт
+    return { host, port: 25565 };
   }
 }
 
 async function startBot() {
-  const target = await getTarget();
-  console.log(`Connecting to ${target.host}:${target.port} (from ${HOST})`);
+  const target = await resolveTarget(HOST);
+  console.log(`Connecting to ${target.host}:${target.port} (domain ${HOST})`);
 
   bot = mineflayer.createBot({
     host: target.host,
     port: target.port,
     username: USERNAME,
-    // version: '1.21.11', // если надо — раскомментируй
+    // version: '1.21.11', // если нужно — раскомментируй
   });
 
   bot.once('spawn', () => {
     console.log('✅ Spawned');
-
     setTimeout(() => {
       bot.chat(`/login ${LS_PASS}`);
       console.log('Sent /login');
