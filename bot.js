@@ -45,7 +45,7 @@ async function startBot() {
     host: target.host,
     port: target.port,
     username: USERNAME,
-    // version: '1.21.11', // если нужно — раскомментируй
+    version: '1.21.11', // если нужно — раскомментируй
   });
 
   bot.once('spawn', () => {
