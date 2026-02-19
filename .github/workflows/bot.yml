@@ -1,7 +1,6 @@
-name: MC Bot
-
+n
 on:
-  workflow_dispatch:
+  workfrjrnrbtbrjlnnron:dispatch:
   schedule:
     - cron: "*/30 * * * *"   # каждые 30 минут (UTC)
   push:
